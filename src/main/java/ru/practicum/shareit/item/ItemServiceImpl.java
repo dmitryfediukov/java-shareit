@@ -25,7 +25,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public synchronized ItemDto update(long userId, long itemId, ItemDto dto) {
+    public ItemDto update(long userId, long itemId, ItemDto dto) {
         userService.get(userId);
         Item item = requireItem(itemId);
         if (!item.getOwner().equals(userId)) {

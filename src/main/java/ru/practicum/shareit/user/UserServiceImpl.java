@@ -13,7 +13,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository repository;
 
     @Override
-    public synchronized UserDto create(UserDto dto) {
+    public UserDto create(UserDto dto) {
         checkEmail(dto.getEmail(), null);
         User user = UserMapper.toModel(dto);
         user.setId(null);
@@ -21,7 +21,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public synchronized UserDto update(long id, UserDto dto) {
+    public UserDto update(long id, UserDto dto) {
         User user = requireUser(id);
         if (dto.getEmail() != null) {
             checkEmail(dto.getEmail(), id);
@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public synchronized void delete(long id) {
+    public void delete(long id) {
         requireUser(id);
         repository.delete(id);
     }
