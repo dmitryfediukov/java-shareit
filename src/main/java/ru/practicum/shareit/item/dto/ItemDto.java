@@ -1,5 +1,8 @@
 package ru.practicum.shareit.item.dto;
 
+import java.util.List;
+import java.util.ArrayList;
+import ru.practicum.shareit.booking.dto.BookingSummaryDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -20,4 +23,7 @@ public class ItemDto {
 
     @NotNull(groups = Create.class)
     private Boolean available;
+    private BookingSummaryDto lastBooking;
+    private BookingSummaryDto nextBooking;
+    private List<CommentDto> comments = new ArrayList<>();
 }
