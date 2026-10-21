@@ -36,7 +36,7 @@ public class ItemServiceImpl implements ItemService {
         userService.get(userId);
         Item item = ItemMapper.toModel(dto);
         item.setId(null);
-        item.setOwner(userId);
+        item.setOwner(userRepository.getReferenceById(userId));
         return ItemMapper.toDto(repository.save(item));
     }
 
@@ -45,7 +45,7 @@ public class ItemServiceImpl implements ItemService {
     public ItemDto update(long userId, long itemId, ItemDto dto) {
         userService.get(userId);
         Item item = requireItem(itemId);
-        if (!item.getOwner().equals(userId)) {
+        if (!item.getOwner().getId().equals(userId)) {
             throw new NotFoundException("Item does not belong to user: " + userId);
         }
         if (dto.getName() != null) {
@@ -57,7 +57,7 @@ public class ItemServiceImpl implements ItemService {
         if (dto.getAvailable() != null) {
             item.setAvailable(dto.getAvailable());
         }
-        return ItemMapper.toDto(repository.save(item));
+        return ItemMapper.toDto(item);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public List<ItemDto> getAll(long userId) {
         userService.get(userId);
-        return enrich(repository.findByOwnerOrderByIdAsc(userId), userId);
+        return enrich(repository.findByOwnerIdOrderByIdAsc(userId), userId);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class ItemServiceImpl implements ItemService {
         List<Long> ids = items.stream().map(Item::getId).toList();
         Map<Long, List<Comment>> comments = commentRepository.findByItemIdInOrderByCreatedAscIdAsc(ids)
                 .stream().collect(Collectors.groupingBy(comment -> comment.getItem().getId()));
-        List<Long> ownedIds = items.stream().filter(item -> item.getOwner().equals(userId))
+        List<Long> ownedIds = items.stream().filter(item -> item.getOwner().getId().equals(userId))
                 .map(Item::getId).toList();
         Map<Long, List<Booking>> bookings = ownedIds.isEmpty() ? Map.of()
                 : bookingRepository.findApprovedForItems(ownedIds).stream()

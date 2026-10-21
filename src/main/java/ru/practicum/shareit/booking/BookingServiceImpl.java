@@ -29,7 +29,7 @@ public class BookingServiceImpl implements BookingService {
         User booker = requireUser(userId);
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new NotFoundException("Item not found: " + dto.getItemId()));
-        if (item.getOwner().equals(userId)) {
+        if (item.getOwner().getId().equals(userId)) {
             throw new NotFoundException("Owner cannot book own item");
         }
         if (!Boolean.TRUE.equals(item.getAvailable())) {
@@ -39,12 +39,7 @@ public class BookingServiceImpl implements BookingService {
                 || !dto.getStart().isAfter(LocalDateTime.now())) {
             throw new BadRequestException("Invalid booking dates");
         }
-        Booking booking = new Booking();
-        booking.setStart(dto.getStart());
-        booking.setEnd(dto.getEnd());
-        booking.setItem(item);
-        booking.setBooker(booker);
-        booking.setStatus(BookingStatus.WAITING);
+        Booking booking = BookingMapper.toModel(dto, item, booker);
         return BookingMapper.toDto(repository.save(booking));
     }
 
@@ -52,20 +47,20 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDto approve(long userId, long bookingId, boolean approved) {
         Booking booking = requireBooking(bookingId);
-        if (!booking.getItem().getOwner().equals(userId)) {
+        if (!booking.getItem().getOwner().getId().equals(userId)) {
             throw new ForbiddenException("Only item owner can approve booking");
         }
         if (booking.getStatus() != BookingStatus.WAITING) {
             throw new BadRequestException("Booking has already been processed");
         }
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
-        return BookingMapper.toDto(repository.save(booking));
+        return BookingMapper.toDto(booking);
     }
 
     @Override
     public BookingResponseDto get(long userId, long bookingId) {
         Booking booking = requireBooking(bookingId);
-        if (!booking.getBooker().getId().equals(userId) && !booking.getItem().getOwner().equals(userId)) {
+        if (!booking.getBooker().getId().equals(userId) && !booking.getItem().getOwner().getId().equals(userId)) {
             throw new NotFoundException("Booking is not accessible to user");
         }
         return BookingMapper.toDto(booking);

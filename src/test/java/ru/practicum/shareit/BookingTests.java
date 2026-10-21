@@ -1,6 +1,8 @@
 package ru.practicum.shareit;
 
 import java.time.LocalDateTime;
+import jakarta.persistence.EntityManager;
+import ru.practicum.shareit.item.dto.ItemDto;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +56,9 @@ class BookingTests {
     @Autowired
     private MockMvc mvc;
 
+    @Autowired
+    private EntityManager entityManager;
+
     private User owner;
     private User booker;
     private User outsider;
@@ -68,7 +73,7 @@ class BookingTests {
         item.setName("Drill");
         item.setDescription("Tool");
         item.setAvailable(true);
-        item.setOwner(owner.getId());
+        item.setOwner(owner);
         item = items.save(item);
     }
 
@@ -160,6 +165,25 @@ class BookingTests {
         mvc.perform(post("/items/{id}/comment", item.getId()).header("X-Sharer-User-Id", booker.getId())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"  \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void managedUpdatesPersistWithoutExplicitSave() {
+        LocalDateTime now = LocalDateTime.now();
+        Booking booking = seed(now.plusDays(1), now.plusDays(2), BookingStatus.WAITING);
+        bookings.approve(owner.getId(), booking.getId(), true);
+        ItemDto patch = new ItemDto();
+        patch.setName("Updated drill");
+        patch.setAvailable(false);
+        itemService.update(owner.getId(), item.getId(), patch);
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(bookingRepository.findById(booking.getId()).orElseThrow().getStatus())
+                .isEqualTo(BookingStatus.APPROVED);
+        Item reloaded = items.findById(item.getId()).orElseThrow();
+        assertThat(reloaded.getName()).isEqualTo("Updated drill");
+        assertThat(reloaded.getAvailable()).isFalse();
+        assertThat(reloaded.getOwner().getId()).isEqualTo(owner.getId());
     }
 
     private User user() {
