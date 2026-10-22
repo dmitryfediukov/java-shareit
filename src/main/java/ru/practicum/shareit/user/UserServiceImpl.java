@@ -1,6 +1,8 @@
 package ru.practicum.shareit.user;
 
 import java.util.List;
+import org.springframework.data.domain.Sort;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ConflictException;
@@ -8,11 +10,13 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository repository;
 
     @Override
+    @Transactional
     public UserDto create(UserDto dto) {
         checkEmail(dto.getEmail(), null);
         User user = UserMapper.toModel(dto);
@@ -21,6 +25,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserDto update(long id, UserDto dto) {
         User user = requireUser(id);
         if (dto.getEmail() != null) {
@@ -40,13 +45,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getAll() {
-        return repository.findAll().stream().map(UserMapper::toDto).toList();
+        return repository.findAll(Sort.by("id")).stream().map(UserMapper::toDto).toList();
     }
 
     @Override
+    @Transactional
     public void delete(long id) {
         requireUser(id);
-        repository.delete(id);
+        repository.deleteById(id);
     }
 
     private User requireUser(long id) {
@@ -54,8 +60,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private void checkEmail(String email, Long excludedId) {
-        boolean duplicate = repository.findAll().stream()
-                .anyMatch(user -> user.getEmail().equalsIgnoreCase(email) && !user.getId().equals(excludedId));
+        boolean duplicate = excludedId == null ? repository.existsByEmailIgnoreCase(email)
+                : repository.existsByEmailIgnoreCaseAndIdNot(email, excludedId);
         if (duplicate) {
             throw new ConflictException("Email already exists: " + email);
         }
